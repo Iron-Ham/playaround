@@ -19,8 +19,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     guard let scene = scene as? UIWindowScene else { return }
 
     window = UIWindow(windowScene: scene)
-    let initialViewController = MainSplitViewController()
-    window?.rootViewController = initialViewController
+    let rootTabBarController = RootTabViewController()
+    window?.rootViewController = rootTabBarController
     window?.makeKeyAndVisible()
 
     // Enable state restoration
