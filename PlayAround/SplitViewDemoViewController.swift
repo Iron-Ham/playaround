@@ -78,10 +78,10 @@ class SplitViewDemoViewController: UIViewController {
     let primaryVC = createSampleViewController(title: "Primary", color: .systemBlue)
     let secondaryVC = createSampleViewController(title: "Secondary", color: .systemGreen)
 
-    let splitVC = NavigableSplitViewController(
-      primary: primaryVC,
-      secondary: secondaryVC
-    )
+    let splitVC = UISplitViewController(style: .doubleColumn)
+    splitVC.setViewController(UINavigationController(rootViewController: primaryVC), for: .primary)
+    splitVC.setViewController(
+      UINavigationController(rootViewController: secondaryVC), for: .secondary)
     splitVC.title = "Basic Split View"
 
     navigationController?.pushViewController(splitVC, animated: true)
@@ -90,7 +90,7 @@ class SplitViewDemoViewController: UIViewController {
   @objc private func showListDetailSplitView() {
     let listVC = SampleListViewController()
     let detailVC = SampleDetailViewController()
-    detailVC.selectedNumber = 1 // Default to showing details for number 1
+    detailVC.selectedNumber = 1  // Default to showing details for number 1
 
     let splitVC = NavigableSplitViewController(
       primary: SampleListViewController(),

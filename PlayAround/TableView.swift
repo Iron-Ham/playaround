@@ -1,5 +1,5 @@
-import UIKit
 import SwiftUI
+import UIKit
 
 final class RootTabViewController: UITabBarController {
 
@@ -10,13 +10,17 @@ final class RootTabViewController: UITabBarController {
   }
 
   private func setupTabBarController() {
-    let homeVC = UINavigationController(rootViewController: SimpleDemoViewController(tabTitle: "Home"))
+    let homeVC = UINavigationController(
+      rootViewController: SimpleDemoViewController(tabTitle: "Home"))
     let splitDemoVC = UINavigationController(rootViewController: SplitViewDemoTabViewController())
-    let profileVC = UINavigationController(rootViewController: SimpleDemoViewController(tabTitle: "Profile"))
+    let profileVC = UINavigationController(
+      rootViewController: SimpleDemoViewController(tabTitle: "Profile"))
 
     homeVC.tabBarItem = UITabBarItem(title: "Home", image: UIImage(systemName: "house"), tag: 0)
-    splitDemoVC.tabBarItem = UITabBarItem(title: "Split Demo", image: UIImage(systemName: "sidebar.left"), tag: 1)
-    profileVC.tabBarItem = UITabBarItem(title: "Profile", image: UIImage(systemName: "person"), tag: 2)
+    splitDemoVC.tabBarItem = UITabBarItem(
+      title: "Split Demo", image: UIImage(systemName: "sidebar.left"), tag: 1)
+    profileVC.tabBarItem = UITabBarItem(
+      title: "Profile", image: UIImage(systemName: "person"), tag: 2)
 
     viewControllers = [homeVC, splitDemoVC, profileVC]
 
@@ -35,7 +39,7 @@ class TableViewController: UIViewController {
 
   private let sampleData = [
     "Split View Demo", "Item 1", "Item 2", "Item 3", "Item 4", "Item 5",
-    "Item 6", "Item 7", "Item 8", "Item 9", "Item 10"
+    "Item 6", "Item 7", "Item 8", "Item 9", "Item 10",
   ]
 
   override func viewDidLoad() {
@@ -54,7 +58,7 @@ class TableViewController: UIViewController {
       tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
       tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
       tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-      tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+      tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
     ])
 
     tableView.delegate = self
@@ -105,7 +109,7 @@ class TableViewController: UIViewController {
       hostingController.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
       hostingController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
       hostingController.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-      widthConstraint
+      widthConstraint,
     ])
 
     hostingController.view.transform = CGAffineTransform(translationX: 320, y: 0)
@@ -154,9 +158,9 @@ extension TableViewController: UITableViewDataSource {
 extension TableViewController: UITableViewDelegate {
   func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
     tableView.deselectRow(at: indexPath, animated: true)
-    
+
     let selectedItem = sampleData[indexPath.row]
-    
+
     if selectedItem == "Split View Demo" {
       let splitDemoVC = UITableViewController()
       navigationController?.pushViewController(splitDemoVC, animated: true)
