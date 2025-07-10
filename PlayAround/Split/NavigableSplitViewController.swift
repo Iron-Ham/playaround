@@ -42,6 +42,8 @@ public class NavigableSplitViewController: UIViewController {
       splitVC.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
     ])
     title = "Split View"
+
+    setupBackButtonMirroring()
   }
 
   public override func viewWillAppear(_ animated: Bool) {
@@ -52,6 +54,88 @@ public class NavigableSplitViewController: UIViewController {
   public override func viewWillDisappear(_ animated: Bool) {
     super.viewWillDisappear(animated)
     navigationController?.setNavigationBarHidden(false, animated: true)
+  }
+
+  private func setupBackButtonMirroring() {
+    guard let navController = navigationController,
+      navController.viewControllers.count > 1
+    else {
+      return
+    }
+
+    removeBackButtons()
+
+    let displayMode = splitVC.displayMode
+
+    if displayMode == .secondaryOnly {
+      if let secondaryNavController = secondaryVC as? UINavigationController,
+        let topVC = secondaryNavController.topViewController
+      {
+        addBackButton(to: topVC)
+      } else {
+        addBackButton(to: secondaryVC)
+      }
+    } else {
+      // Primary column is visible (either alone or with secondary), add back button to primary
+      if let primaryNavController = primaryVC as? UINavigationController,
+        let topVC = primaryNavController.topViewController
+      {
+        addBackButton(to: topVC)
+      } else {
+        addBackButton(to: primaryVC)
+      }
+    }
+  }
+
+  private func addBackButton(to viewController: UIViewController) {
+    let backButton = UIBarButtonItem(
+      image: UIImage(systemName: "chevron.left"),
+      style: .plain,
+      target: self,
+      action: #selector(backButtonTapped)
+    )
+
+    let backButtonGroup = UIBarButtonItemGroup(
+      barButtonItems: [backButton],
+      representativeItem: nil
+    )
+
+    let existingGroups = viewController.navigationItem.leadingItemGroups
+    viewController.navigationItem.leadingItemGroups = [backButtonGroup] + existingGroups
+  }
+
+  private func removeBackButtons() {
+    if let primaryNavController = primaryVC as? UINavigationController,
+      let topVC = primaryNavController.topViewController
+    {
+      removeBackButton(from: topVC)
+    } else {
+      removeBackButton(from: primaryVC)
+    }
+
+    if let secondaryNavController = secondaryVC as? UINavigationController,
+      let topVC = secondaryNavController.topViewController
+    {
+      removeBackButton(from: topVC)
+    } else {
+      removeBackButton(from: secondaryVC)
+    }
+  }
+
+  private func removeBackButton(from viewController: UIViewController) {
+    let leadingGroups = viewController.navigationItem.leadingItemGroups
+
+    let filteredGroups = leadingGroups.filter { group in
+      !group.barButtonItems.contains { item in
+        item.target === self && item.action == #selector(backButtonTapped)
+      }
+    }
+
+    viewController.navigationItem.leadingItemGroups = filteredGroups.isEmpty ? [] : filteredGroups
+  }
+
+  @objc private func backButtonTapped() {
+    navigationController?.popViewController(animated: true)
   }
 }
 
@@ -66,7 +150,15 @@ extension NavigableSplitViewController: UISplitViewControllerDelegate {
       return .primary
     }
 
-    // If transitioning from regular to compact (like iPad rotation), show secondary
     return .secondary
+  }
+
+  public func splitViewController(
+    _ svc: UISplitViewController,
+    willChangeTo displayMode: UISplitViewController.DisplayMode
+  ) {
+    DispatchQueue.main.async {
+      self.setupBackButtonMirroring()
+    }
   }
 }
