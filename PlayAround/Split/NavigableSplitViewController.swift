@@ -7,10 +7,6 @@ public class NavigableSplitViewController: UIViewController {
 
   let splitVC: UISplitViewController
 
-  func setSecondary(viewController: UIViewController) {
-    self.splitVC.setViewController(viewController, for: .secondary)
-  }
-
   public init(
     primary: UIViewController,
     secondary: UIViewController
@@ -20,7 +16,10 @@ public class NavigableSplitViewController: UIViewController {
     self.splitVC = UISplitViewController(style: .doubleColumn)
     splitVC.setViewController(primary, for: .primary)
     splitVC.setViewController(secondary, for: .secondary)
+    splitVC.preferredDisplayMode = .oneBesideSecondary
+    splitVC.preferredSplitBehavior = .tile
     super.init(nibName: nil, bundle: nil)
+    splitVC.delegate = self
   }
 
   required init?(coder: NSCoder) {
@@ -31,39 +30,37 @@ public class NavigableSplitViewController: UIViewController {
     super.viewDidLoad()
 
     view.backgroundColor = .systemBackground
+    addChild(splitVC)
+    view.addSubview(splitVC.view)
+    splitVC.didMove(toParent: self)
 
-    if traitCollection.horizontalSizeClass == .compact {
-      addChild(primaryVC)
-      view.addSubview(primaryVC.view)
-      primaryVC.didMove(toParent: self)
+    splitVC.view.translatesAutoresizingMaskIntoConstraints = false
+    NSLayoutConstraint.activate([
+      splitVC.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+      splitVC.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      splitVC.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      splitVC.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+    ])
+    title = "Split View"
+  }
 
-      primaryVC.view.translatesAutoresizingMaskIntoConstraints = false
-      NSLayoutConstraint.activate([
-        primaryVC.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-        primaryVC.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-        primaryVC.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-        primaryVC.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-      ])
+  public override func viewWillAppear(_ animated: Bool) {
+    super.viewWillAppear(animated)
+    navigationController?.setNavigationBarHidden(true, animated: true)
+  }
 
-      title = primaryVC.title ?? "Split View"
-    } else {
-      let splitVC = UISplitViewController(style: .doubleColumn)
-      splitVC.setViewController(primaryVC, for: .primary)
-      splitVC.setViewController(secondaryVC, for: .secondary)
+  public override func viewWillDisappear(_ animated: Bool) {
+    super.viewWillDisappear(animated)
+    navigationController?.setNavigationBarHidden(false, animated: true)
+  }
+}
 
-      addChild(splitVC)
-      view.addSubview(splitVC.view)
-      splitVC.didMove(toParent: self)
-
-      splitVC.view.translatesAutoresizingMaskIntoConstraints = false
-      NSLayoutConstraint.activate([
-        splitVC.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-        splitVC.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-        splitVC.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-        splitVC.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-      ])
-
-      title = "Split View"
-    }
+extension NavigableSplitViewController: UISplitViewControllerDelegate {
+  public func splitViewController(
+    _ svc: UISplitViewController,
+    topColumnForCollapsingToProposedTopColumn proposedTopColumn: UISplitViewController.Column
+  ) -> UISplitViewController.Column {
+    // If we are starting in a collapsed state, we should just show the first column.
+    // Otherwise, the user has presumably collapsed the view themselves and should see the detail column.
   }
 }
