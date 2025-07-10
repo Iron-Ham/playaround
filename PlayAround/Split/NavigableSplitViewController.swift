@@ -60,7 +60,13 @@ extension NavigableSplitViewController: UISplitViewControllerDelegate {
     _ svc: UISplitViewController,
     topColumnForCollapsingToProposedTopColumn proposedTopColumn: UISplitViewController.Column
   ) -> UISplitViewController.Column {
-    // If we are starting in a collapsed state, we should just show the first column.
-    // Otherwise, the user has presumably collapsed the view themselves and should see the detail column.
+    if UIDevice.current.userInterfaceIdiom == .phone
+      || traitCollection.horizontalSizeClass == .compact
+    {
+      return .primary
+    }
+
+    // If transitioning from regular to compact (like iPad rotation), show secondary
+    return .secondary
   }
 }
