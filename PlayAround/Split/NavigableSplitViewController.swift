@@ -14,7 +14,7 @@ public class NavigableSplitViewController: UIViewController {
     splitVC.viewController(for: .inspector)
   }
 
-  let splitVC: UISplitViewController
+  let splitVC: CustomUISplitViewController
 
   var isCompact: Bool {
     splitVC.isCollapsed
@@ -24,19 +24,25 @@ public class NavigableSplitViewController: UIViewController {
     splitVC.displayMode
   }
 
+  private var deferredSecondaryViewController: UIViewController?
+
   public init(
     primary: UIViewController,
-    secondary: UIViewController
+    secondary: UIViewController?
   ) {
-    self.splitVC = UISplitViewController(style: .doubleColumn)
-    splitVC.setViewController(primary, for: .primary)
-    splitVC.setViewController(secondary, for: .secondary)
-
+    self.splitVC = CustomUISplitViewController(style: .doubleColumn)
     splitVC.preferredDisplayMode = .oneBesideSecondary
     splitVC.preferredSplitBehavior = .tile
 
     super.init(nibName: nil, bundle: nil)
     splitVC.delegate = self
+
+    splitVC.setViewController(primary, for: .primary)
+    if traitCollection.horizontalSizeClass == .compact {
+      self.deferredSecondaryViewController = secondary
+    } else {
+      splitVC.setViewController(secondary, for: .secondary)
+    }
   }
 
   @available(*, unavailable)
@@ -76,6 +82,19 @@ public class NavigableSplitViewController: UIViewController {
     navigationController?.setNavigationBarHidden(false, animated: true)
   }
 
+  public override func viewDidAppear(_ animated: Bool) {
+    super.viewDidAppear(animated)
+    // Possible iOS 26 Beta Bug:
+    // This must be deferred until after `viewDidAppear`, or we will end up in an infinite
+    // logging loop, which consumes all system resources.
+    // https://developer.apple.com/forums/thread/792740#792740021
+    if let deferredSecondaryViewController {
+      DispatchQueue.main.async {
+        self.splitVC.showDetailViewController(deferredSecondaryViewController, sender: nil)
+      }
+    }
+  }
+
   private func setupBackButtonMirroring() {
     guard let navController = navigationController,
       navController.viewControllers.count > 1
@@ -83,7 +102,6 @@ public class NavigableSplitViewController: UIViewController {
       return
     }
 
-    removeBackButtons()
     if let primaryViewController {
       addNavigationButtons(to: primaryViewController, includeBackButton: isBackButtonVisible(for: .primary))
     }
@@ -111,121 +129,9 @@ public class NavigableSplitViewController: UIViewController {
     viewController.navigationItem.leadingItemGroups = leadingGroups + existingGroups
   }
 
-  private func removeBackButtons() {
-    if let primaryNavController = primaryViewController as? UINavigationController,
-      let topVC = primaryNavController.topViewController
-    {
-      removeCustomButtons(from: topVC)
-    } else if let primaryViewController {
-      removeCustomButtons(from: primaryViewController)
-    }
-
-    if let secondaryNavController = secondaryViewController as? UINavigationController,
-      let topVC = secondaryNavController.topViewController
-    {
-      removeCustomButtons(from: topVC)
-    } else if let secondaryViewController {
-      removeCustomButtons(from: secondaryViewController)
-    }
-  }
-
-  private func removeCustomButtons(from viewController: UIViewController) {
-    // Remove from leading groups
-    let leadingGroups = viewController.navigationItem.leadingItemGroups
-
-    let filteredLeadingGroups = leadingGroups.filter { group in
-      !group.barButtonItems.contains { item in
-        (item.target === self && item.action == #selector(backButtonTapped))
-          || (item.target === self && item.action == #selector(sidebarButtonTapped))
-      }
-    }
-
-    viewController.navigationItem.leadingItemGroups =
-      filteredLeadingGroups.isEmpty ? [] : filteredLeadingGroups
-
-    // For trailing groups, we need to be more careful to preserve the inspector button
-    // Only remove inspector buttons if we're explicitly asked to do so
-    let trailingGroups = viewController.navigationItem.trailingItemGroups
-
-    let filteredTrailingGroups = trailingGroups.filter { group in
-      !group.barButtonItems.contains { item in
-        item.target === self && item.action == #selector(inspectorButtonTapped)
-      }
-    }
-
-    // Only update trailing groups if we actually found inspector buttons to remove
-    if filteredTrailingGroups.count != trailingGroups.count {
-      viewController.navigationItem.trailingItemGroups =
-        filteredTrailingGroups.isEmpty ? [] : filteredTrailingGroups
-    }
-  }
-
   @objc private func backButtonTapped() {
     navigationController?.popViewController(animated: true)
   }
-
-  @objc private func sidebarButtonTapped() {
-    if splitVC.displayMode == .secondaryOnly {
-      splitVC.preferredDisplayMode = .oneBesideSecondary
-    } else {
-      splitVC.preferredDisplayMode = .secondaryOnly
-    }
-  }
-
-  @objc private func inspectorButtonTapped() {
-    if #available(iOS 26.0, *) {
-      // Toggle inspector column visibility
-      if splitVC.isShowing(.inspector) {
-        splitVC.hide(.inspector)
-      } else {
-        splitVC.show(.inspector)
-      }
-    }
-  }
 }
 
-extension NavigableSplitViewController: UISplitViewControllerDelegate {
-  public func splitViewController(
-    _ svc: UISplitViewController,
-    topColumnForCollapsingToProposedTopColumn proposedTopColumn: UISplitViewController.Column
-  ) -> UISplitViewController.Column {
-    if isCompact {
-      UISplitViewController.Column.primary
-    } else {
-      UISplitViewController.Column.secondary
-    }
-  }
-
-  public func splitViewController(
-    _ splitViewController: UISplitViewController, showDetail vc: UIViewController, sender: Any?
-  ) -> Bool {
-    if splitViewController.isCollapsed {
-      // When collapsed, replace the top view controller if it's not the master
-      guard
-        let primaryNavController = splitViewController.viewControllers.first
-          as? UINavigationController
-      else {
-        return false
-      }
-
-      // Replace the top view controller (which should be the current detail)
-      if primaryNavController.viewControllers.count > 1 {
-        primaryNavController.popViewController(animated: false)
-      }
-      primaryNavController.pushViewController(vc, animated: true)
-
-      // Update navigation buttons after detail change
-      DispatchQueue.main.async {
-        self.setupBackButtonMirroring()
-      }
-
-      return true
-    } else {
-      // When not collapsed, replace the secondary view controller
-      let detailNavController = UINavigationController(rootViewController: vc)
-      splitViewController.setViewController(detailNavController, for: .secondary)
-
-      return true
-    }
-  }
-}
+extension NavigableSplitViewController: UISplitViewControllerDelegate {}

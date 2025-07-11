@@ -88,7 +88,6 @@ class SplitViewDemoViewController: UIViewController {
   }
 
   @objc private func showListDetailSplitView() {
-    let listVC = SampleListViewController()
     let detailVC = SampleDetailViewController()
     detailVC.selectedNumber = 1  // Default to showing details for number 1
 
