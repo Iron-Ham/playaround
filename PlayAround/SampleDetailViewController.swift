@@ -74,9 +74,13 @@ class SampleDetailViewController: UIViewController {
     let newDetailVC = SampleDetailViewController()
     newDetailVC.selectedNumber = selectedNumber
 
+    // Create inspector view controller for iOS 26+
+    let inspectorVC = createInspectorViewController()
+
     let splitVC = NavigableSplitViewController(
       primary: newListVC,
-      secondary: newDetailVC
+      secondary: newDetailVC,
+      inspector: inspectorVC
     )
     splitVC.title = "Nested Split View"
 
@@ -90,6 +94,33 @@ class SampleDetailViewController: UIViewController {
     }
 
     navigationController?.pushViewController(splitVC, animated: true)
+  }
+
+  private func createInspectorViewController() -> UIViewController {
+    let inspectorVC = UIViewController()
+    inspectorVC.view.backgroundColor = .systemBackground
+    inspectorVC.title = "Inspector"
+
+    let label = UILabel()
+    label.text =
+      "Inspector Panel\n\nNumber: \(selectedNumber)\n\nThis is a demonstration of the new iOS 26 inspector column feature."
+    label.font = .preferredFont(forTextStyle: .body)
+    label.textAlignment = .center
+    label.numberOfLines = 0
+    label.translatesAutoresizingMaskIntoConstraints = false
+
+    inspectorVC.view.addSubview(label)
+
+    NSLayoutConstraint.activate([
+      label.centerXAnchor.constraint(equalTo: inspectorVC.view.centerXAnchor),
+      label.centerYAnchor.constraint(equalTo: inspectorVC.view.centerYAnchor),
+      label.leadingAnchor.constraint(
+        greaterThanOrEqualTo: inspectorVC.view.leadingAnchor, constant: 20),
+      label.trailingAnchor.constraint(
+        lessThanOrEqualTo: inspectorVC.view.trailingAnchor, constant: -20),
+    ])
+
+    return inspectorVC
   }
 }
 
