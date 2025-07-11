@@ -2,23 +2,34 @@ import UIKit
 
 public class NavigableSplitViewController: UIViewController {
 
-  private let primaryVC: UIViewController
-  private let secondaryVC: UIViewController
-  private let inspectorVC: UIViewController?
+  let primaryVC: UIViewController
+  let secondaryVC: UIViewController
+  let inspectorVC: UIViewController?
 
   let splitVC: UISplitViewController
 
-  private var isCompact: Bool {
-    UIDevice.current.userInterfaceIdiom == .phone
-      || traitCollection.horizontalSizeClass == .compact
+  var isCompact: Bool {
+    splitVC.isCollapsed
   }
 
-  private var supportsInspector: Bool {
+  var supportsInspector: Bool {
     if #available(iOS 26.0, *) {
       true
     } else {
       false
     }
+  }
+
+  var isInspectorVisible: Bool {
+    if #available(iOS 26.0, *) {
+      splitVC.isShowing(.inspector)
+    } else {
+      false
+    }
+  }
+
+  var displayMode: UISplitViewController.DisplayMode {
+    splitVC.displayMode
   }
 
   public init(
