@@ -37,7 +37,13 @@ public class NavigableSplitViewController: UIViewController {
     super.init(nibName: nil, bundle: nil)
 
     splitVC.setViewController(primary, for: .primary)
-    if traitCollection.horizontalSizeClass == .compact {
+    // Possible iOS 26 Beta Bug:
+    // This must be deferred until after `viewDidAppear`, or we will end up in an infinite
+    // logging loop, which consumes all system resources. This only applies in compact mode.
+    //
+    // On older systems, this works as intended.
+    // https://developer.apple.com/forums/thread/792740#792740021
+    if #available(iOS 26.0, *), traitCollection.horizontalSizeClass == .compact {
       self.deferredSecondaryViewController = secondary
     } else {
       splitVC.setViewController(secondary, for: .secondary)
@@ -83,10 +89,6 @@ public class NavigableSplitViewController: UIViewController {
 
   public override func viewDidAppear(_ animated: Bool) {
     super.viewDidAppear(animated)
-    // Possible iOS 26 Beta Bug:
-    // This must be deferred until after `viewDidAppear`, or we will end up in an infinite
-    // logging loop, which consumes all system resources.
-    // https://developer.apple.com/forums/thread/792740#792740021
     if let deferredSecondaryViewController {
       DispatchQueue.main.async {
         self.splitVC.showDetailViewController(deferredSecondaryViewController, sender: nil)
