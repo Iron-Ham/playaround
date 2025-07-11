@@ -7,10 +7,8 @@ class SampleDetailViewController: UIViewController {
     }
   }
 
-  private let scrollView = UIScrollView()
-  private let contentView = UIView()
-  private let numberLabel = UILabel()
-  private let propertiesStackView = UIStackView()
+  private let tableView = UITableView(frame: .zero, style: .insetGrouped)
+  private var properties: [(title: String, value: String)] = []
 
   override func viewDidLoad() {
     super.viewDidLoad()
@@ -19,7 +17,7 @@ class SampleDetailViewController: UIViewController {
     view.backgroundColor = .systemBackground
 
     setupNavigationBar()
-    setupUI()
+    setupTableView()
     updateUI()
   }
 
@@ -34,107 +32,41 @@ class SampleDetailViewController: UIViewController {
     navigationItem.rightBarButtonItem = pushSplitButton
   }
 
-  private func setupUI() {
-    scrollView.translatesAutoresizingMaskIntoConstraints = false
-    contentView.translatesAutoresizingMaskIntoConstraints = false
+  private func setupTableView() {
+    tableView.translatesAutoresizingMaskIntoConstraints = false
+    tableView.delegate = self
+    tableView.dataSource = self
 
-    view.addSubview(scrollView)
-    scrollView.addSubview(contentView)
+    // Register cells
+    tableView.register(UITableViewCell.self, forCellReuseIdentifier: "PropertyCell")
+    tableView.register(NumberHeaderCell.self, forCellReuseIdentifier: "NumberHeaderCell")
 
-    numberLabel.font = .systemFont(ofSize: 80, weight: .bold)
-    numberLabel.textAlignment = .center
-    numberLabel.translatesAutoresizingMaskIntoConstraints = false
-
-    propertiesStackView.axis = .vertical
-    propertiesStackView.spacing = 16
-    propertiesStackView.alignment = .fill
-    propertiesStackView.distribution = .fill
-    propertiesStackView.translatesAutoresizingMaskIntoConstraints = false
-
-    contentView.addSubview(numberLabel)
-    contentView.addSubview(propertiesStackView)
+    view.addSubview(tableView)
 
     NSLayoutConstraint.activate([
-      scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-      scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-      scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-
-      contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-      contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-      contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-      contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-      contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
-
-      numberLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 40),
-      numberLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-      numberLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-
-      propertiesStackView.topAnchor.constraint(equalTo: numberLabel.bottomAnchor, constant: 40),
-      propertiesStackView.leadingAnchor.constraint(
-        equalTo: contentView.leadingAnchor, constant: 20),
-      propertiesStackView.trailingAnchor.constraint(
-        equalTo: contentView.trailingAnchor, constant: -20),
-      propertiesStackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -40),
+      tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+      tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
     ])
   }
 
   private func updateUI() {
     guard isViewLoaded else { return }
 
-    numberLabel.text = "\(selectedNumber)"
     title = "Number \(selectedNumber)"
 
-    if selectedNumber % 2 == 0 {
-      numberLabel.textColor = .systemBlue
-    } else {
-      numberLabel.textColor = .systemGreen
-    }
+    // Update properties data
+    properties = [
+      ("Value", "\(selectedNumber)"),
+      ("Type", selectedNumber % 2 == 0 ? "Even" : "Odd"),
+      ("Square", "\(selectedNumber * selectedNumber)"),
+      ("Cube", "\(selectedNumber * selectedNumber * selectedNumber)"),
+      ("Binary", String(selectedNumber, radix: 2)),
+      ("Hexadecimal", String(selectedNumber, radix: 16).uppercased()),
+    ]
 
-    propertiesStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
-
-    addProperty("Value", value: "\(selectedNumber)")
-    addProperty("Type", value: selectedNumber % 2 == 0 ? "Even" : "Odd")
-    addProperty("Square", value: "\(selectedNumber * selectedNumber)")
-    addProperty("Cube", value: "\(selectedNumber * selectedNumber * selectedNumber)")
-    addProperty("Binary", value: String(selectedNumber, radix: 2))
-    addProperty("Hexadecimal", value: String(selectedNumber, radix: 16).uppercased())
-  }
-
-  private func addProperty(_ title: String, value: String) {
-    let containerView = UIView()
-    containerView.backgroundColor = .secondarySystemBackground
-    containerView.layer.cornerRadius = 12
-    containerView.translatesAutoresizingMaskIntoConstraints = false
-
-    let titleLabel = UILabel()
-    titleLabel.text = title
-    titleLabel.font = .preferredFont(forTextStyle: .headline)
-    titleLabel.textColor = .label
-    titleLabel.translatesAutoresizingMaskIntoConstraints = false
-
-    let valueLabel = UILabel()
-    valueLabel.text = value
-    valueLabel.font = .preferredFont(forTextStyle: .body)
-    valueLabel.textColor = .secondaryLabel
-    valueLabel.numberOfLines = 0
-    valueLabel.translatesAutoresizingMaskIntoConstraints = false
-
-    containerView.addSubview(titleLabel)
-    containerView.addSubview(valueLabel)
-
-    NSLayoutConstraint.activate([
-      titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 12),
-      titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-      titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
-
-      valueLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
-      valueLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-      valueLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
-      valueLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -12),
-    ])
-
-    propertiesStackView.addArrangedSubview(containerView)
+    tableView.reloadData()
   }
 
   @objc private func pushAnotherSplitView() {
@@ -158,5 +90,89 @@ class SampleDetailViewController: UIViewController {
     }
 
     navigationController?.pushViewController(splitVC, animated: true)
+  }
+}
+
+// MARK: - UITableViewDataSource
+extension SampleDetailViewController: UITableViewDataSource {
+  func numberOfSections(in tableView: UITableView) -> Int {
+    return 2  // Header section + Properties section
+  }
+
+  func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    if section == 0 {
+      return 1  // Number header
+    } else {
+      return properties.count
+    }
+  }
+
+  func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    if indexPath.section == 0 {
+      let cell =
+        tableView.dequeueReusableCell(withIdentifier: "NumberHeaderCell", for: indexPath)
+        as! NumberHeaderCell
+      cell.configure(with: selectedNumber)
+      return cell
+    } else {
+      let cell = UITableViewCell(style: .value1, reuseIdentifier: "PropertyCell")
+      let property = properties[indexPath.row]
+      cell.textLabel?.text = property.title
+      cell.detailTextLabel?.text = property.value
+      cell.accessoryType = .none
+      cell.selectionStyle = .none
+      return cell
+    }
+  }
+}
+
+// MARK: - UITableViewDelegate
+extension SampleDetailViewController: UITableViewDelegate {
+  func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+    if indexPath.section == 0 {
+      return 120  // Header cell height
+    } else {
+      return UITableView.automaticDimension
+    }
+  }
+}
+
+// MARK: - NumberHeaderCell
+class NumberHeaderCell: UITableViewCell {
+  private let numberLabel = UILabel()
+
+  override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+    super.init(style: style, reuseIdentifier: reuseIdentifier)
+    setupUI()
+  }
+
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  private func setupUI() {
+    numberLabel.font = .systemFont(ofSize: 80, weight: .bold)
+    numberLabel.textAlignment = .center
+    numberLabel.translatesAutoresizingMaskIntoConstraints = false
+
+    contentView.addSubview(numberLabel)
+
+    NSLayoutConstraint.activate([
+      numberLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+      numberLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+      numberLabel.topAnchor.constraint(greaterThanOrEqualTo: contentView.topAnchor, constant: 20),
+      numberLabel.bottomAnchor.constraint(
+        lessThanOrEqualTo: contentView.bottomAnchor, constant: -20),
+    ])
+  }
+
+  func configure(with number: Int) {
+    numberLabel.text = "\(number)"
+
+    if number % 2 == 0 {
+      numberLabel.textColor = .systemBlue
+    } else {
+      numberLabel.textColor = .systemGreen
+    }
   }
 }
