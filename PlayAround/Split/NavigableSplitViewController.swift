@@ -23,6 +23,10 @@ public class NavigableSplitViewController: UIViewController {
     splitVC.setViewController(secondary, for: .secondary)
     splitVC.preferredDisplayMode = .oneBesideSecondary
     splitVC.preferredSplitBehavior = .tile
+
+    // Hide the default sidebar button since we'll provide our own
+    splitVC.presentsWithGesture = false
+
     super.init(nibName: nil, bundle: nil)
     splitVC.delegate = self
   }
@@ -71,68 +75,120 @@ public class NavigableSplitViewController: UIViewController {
     removeBackButtons()
 
     let displayMode = splitVC.displayMode
+    let shouldShowSidebarButton = !isCompact  // Only show sidebar button in regular layouts
 
     if displayMode == .secondaryOnly {
       if let secondaryNavController = secondaryVC as? UINavigationController,
         let topVC = secondaryNavController.topViewController
       {
-        addBackButton(to: topVC)
+        addNavigationButtons(
+          to: topVC, includeBackButton: true, includeSidebarButton: shouldShowSidebarButton)
       } else {
-        addBackButton(to: secondaryVC)
+        addNavigationButtons(
+          to: secondaryVC, includeBackButton: true, includeSidebarButton: shouldShowSidebarButton)
       }
     } else {
-      // Primary column is visible (either alone or with secondary), add back button to primary
+      // Primary column is visible, add back button to primary and sidebar button to secondary if visible
       if let primaryNavController = primaryVC as? UINavigationController,
         let topVC = primaryNavController.topViewController
       {
-        addBackButton(to: topVC)
+        addNavigationButtons(to: topVC, includeBackButton: true, includeSidebarButton: false)
       } else {
-        addBackButton(to: primaryVC)
+        addNavigationButtons(to: primaryVC, includeBackButton: true, includeSidebarButton: false)
+      }
+
+      // Add sidebar button to secondary if it's visible and we're not in compact mode
+      if displayMode == .oneBesideSecondary && shouldShowSidebarButton {
+        if let secondaryNavController = secondaryVC as? UINavigationController,
+          let topVC = secondaryNavController.topViewController
+        {
+          addNavigationButtons(to: topVC, includeBackButton: false, includeSidebarButton: true)
+        } else {
+          addNavigationButtons(
+            to: secondaryVC, includeBackButton: false, includeSidebarButton: true)
+        }
       }
     }
   }
 
-  private func addBackButton(to viewController: UIViewController) {
-    let backButton = UIBarButtonItem(
-      image: UIImage(systemName: "chevron.left"),
-      style: .plain,
-      target: self,
-      action: #selector(backButtonTapped)
-    )
+  private func addNavigationButtons(
+    to viewController: UIViewController, includeBackButton: Bool, includeSidebarButton: Bool
+  ) {
+    var groups: [UIBarButtonItemGroup] = []
 
-    let backButtonGroup = UIBarButtonItemGroup(
-      barButtonItems: [backButton],
-      representativeItem: nil
-    )
+    // Add back button in its own group
+    if includeBackButton {
+      let backButton = UIBarButtonItem(
+        image: UIImage(systemName: "chevron.left"),
+        style: .plain,
+        target: self,
+        action: #selector(backButtonTapped)
+      )
+      let backButtonGroup = UIBarButtonItemGroup(
+        barButtonItems: [backButton],
+        representativeItem: nil
+      )
+      groups.append(backButtonGroup)
+    }
 
-    let existingGroups = viewController.navigationItem.leadingItemGroups
-    viewController.navigationItem.leadingItemGroups = [backButtonGroup] + existingGroups
+    // Add sidebar toggle button in its own group
+    if includeSidebarButton {
+      let sidebarButton = UIBarButtonItem(
+        image: UIImage(systemName: "sidebar.left"),
+        style: .plain,
+        target: self,
+        action: #selector(sidebarButtonTapped)
+      )
+      let sidebarButtonGroup = UIBarButtonItemGroup(
+        barButtonItems: [sidebarButton],
+        representativeItem: nil
+      )
+      groups.append(sidebarButtonGroup)
+    }
+
+    if !groups.isEmpty {
+      // Get existing groups, being careful not to interfere with system groups
+      let existingGroups = viewController.navigationItem.leadingItemGroups
+
+      // Check if we already have our buttons to avoid duplicates
+      let hasOurButtons = existingGroups.contains { group in
+        group.barButtonItems.contains { item in
+          (item.target === self && item.action == #selector(backButtonTapped))
+            || (item.target === self && item.action == #selector(sidebarButtonTapped))
+        }
+      }
+
+      if !hasOurButtons {
+        viewController.navigationItem.leadingItemGroups = groups + existingGroups
+      }
+    }
   }
 
   private func removeBackButtons() {
     if let primaryNavController = primaryVC as? UINavigationController,
       let topVC = primaryNavController.topViewController
     {
-      removeBackButton(from: topVC)
+      removeCustomButtons(from: topVC)
     } else {
-      removeBackButton(from: primaryVC)
+      removeCustomButtons(from: primaryVC)
     }
 
     if let secondaryNavController = secondaryVC as? UINavigationController,
       let topVC = secondaryNavController.topViewController
     {
-      removeBackButton(from: topVC)
+      removeCustomButtons(from: topVC)
     } else {
-      removeBackButton(from: secondaryVC)
+      removeCustomButtons(from: secondaryVC)
     }
   }
 
-  private func removeBackButton(from viewController: UIViewController) {
+  private func removeCustomButtons(from viewController: UIViewController) {
     let leadingGroups = viewController.navigationItem.leadingItemGroups
 
     let filteredGroups = leadingGroups.filter { group in
       !group.barButtonItems.contains { item in
-        item.target === self && item.action == #selector(backButtonTapped)
+        (item.target === self && item.action == #selector(backButtonTapped))
+          || (item.target === self && item.action == #selector(sidebarButtonTapped))
       }
     }
 
@@ -141,6 +197,14 @@ public class NavigableSplitViewController: UIViewController {
 
   @objc private func backButtonTapped() {
     navigationController?.popViewController(animated: true)
+  }
+
+  @objc private func sidebarButtonTapped() {
+    if splitVC.displayMode == .secondaryOnly {
+      splitVC.preferredDisplayMode = .oneBesideSecondary
+    } else {
+      splitVC.preferredDisplayMode = .secondaryOnly
+    }
   }
 }
 
@@ -160,31 +224,51 @@ extension NavigableSplitViewController: UISplitViewControllerDelegate {
     _ svc: UISplitViewController,
     willChangeTo displayMode: UISplitViewController.DisplayMode
   ) {
+    // Delay the back button update to avoid interfering with system sidebar button transitions
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+      self.setupBackButtonMirroring()
+    }
+  }
+
+  public func splitViewControllerDidCollapse(_ svc: UISplitViewController) {
+    // Update back button after collapse transition completes
     DispatchQueue.main.async {
       self.setupBackButtonMirroring()
     }
   }
 
-  public func splitViewController(_ splitViewController: UISplitViewController, showDetail vc: UIViewController, sender: Any?) -> Bool {
-      if splitViewController.isCollapsed {
-          // When collapsed, replace the top view controller if it's not the master
-          guard let primaryNavController = splitViewController.viewControllers.first as? UINavigationController else {
-              return false
-          }
+  public func splitViewControllerDidExpand(_ svc: UISplitViewController) {
+    // Update back button after expand transition completes
+    DispatchQueue.main.async {
+      self.setupBackButtonMirroring()
+    }
+  }
 
-          // Replace the top view controller (which should be the current detail)
-          if primaryNavController.viewControllers.count > 1 {
-              primaryNavController.popViewController(animated: false)
-          }
-          primaryNavController.pushViewController(vc, animated: true)
-
-          return true
-      } else {
-          // When not collapsed, replace the secondary view controller
-          let detailNavController = UINavigationController(rootViewController: vc)
-          splitViewController.setViewController(detailNavController, for: .secondary)
-
-          return true
+  public func splitViewController(
+    _ splitViewController: UISplitViewController, showDetail vc: UIViewController, sender: Any?
+  ) -> Bool {
+    if splitViewController.isCollapsed {
+      // When collapsed, replace the top view controller if it's not the master
+      guard
+        let primaryNavController = splitViewController.viewControllers.first
+          as? UINavigationController
+      else {
+        return false
       }
+
+      // Replace the top view controller (which should be the current detail)
+      if primaryNavController.viewControllers.count > 1 {
+        primaryNavController.popViewController(animated: false)
+      }
+      primaryNavController.pushViewController(vc, animated: true)
+
+      return true
+    } else {
+      // When not collapsed, replace the secondary view controller
+      let detailNavController = UINavigationController(rootViewController: vc)
+      splitViewController.setViewController(detailNavController, for: .secondary)
+
+      return true
+    }
   }
 }
