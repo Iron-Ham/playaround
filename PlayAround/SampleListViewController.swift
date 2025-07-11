@@ -79,10 +79,6 @@ extension SampleListViewController: UITableViewDelegate {
     // Gets handled by our router
     if let split = navigationController?.parent as? UISplitViewController {
       split.showDetailViewController(detailVC, sender: nil)
-    } else if let split = splitViewController {
-      split.showDetailViewController(detailVC, sender: nil)
-    } else {
-      navigationController?.pushViewController(detailVC, animated: true)
     }
   }
 

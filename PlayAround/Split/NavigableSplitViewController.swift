@@ -7,6 +7,11 @@ public class NavigableSplitViewController: UIViewController {
 
   let splitVC: UISplitViewController
 
+  private var isCompact: Bool {
+    UIDevice.current.userInterfaceIdiom == .phone
+      || traitCollection.horizontalSizeClass == .compact
+  }
+
   public init(
     primary: UIViewController,
     secondary: UIViewController
@@ -144,13 +149,11 @@ extension NavigableSplitViewController: UISplitViewControllerDelegate {
     _ svc: UISplitViewController,
     topColumnForCollapsingToProposedTopColumn proposedTopColumn: UISplitViewController.Column
   ) -> UISplitViewController.Column {
-    if UIDevice.current.userInterfaceIdiom == .phone
-      || traitCollection.horizontalSizeClass == .compact
-    {
-      return .primary
+    if isCompact {
+      UISplitViewController.Column.primary
+    } else {
+      UISplitViewController.Column.secondary
     }
-
-    return .secondary
   }
 
   public func splitViewController(
@@ -160,5 +163,28 @@ extension NavigableSplitViewController: UISplitViewControllerDelegate {
     DispatchQueue.main.async {
       self.setupBackButtonMirroring()
     }
+  }
+
+  public func splitViewController(_ splitViewController: UISplitViewController, showDetail vc: UIViewController, sender: Any?) -> Bool {
+      if splitViewController.isCollapsed {
+          // When collapsed, replace the top view controller if it's not the master
+          guard let primaryNavController = splitViewController.viewControllers.first as? UINavigationController else {
+              return false
+          }
+
+          // Replace the top view controller (which should be the current detail)
+          if primaryNavController.viewControllers.count > 1 {
+              primaryNavController.popViewController(animated: false)
+          }
+          primaryNavController.pushViewController(vc, animated: true)
+
+          return true
+      } else {
+          // When not collapsed, replace the secondary view controller
+          let detailNavController = UINavigationController(rootViewController: vc)
+          splitViewController.setViewController(detailNavController, for: .secondary)
+
+          return true
+      }
   }
 }
