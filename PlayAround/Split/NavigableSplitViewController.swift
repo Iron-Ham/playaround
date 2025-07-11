@@ -42,15 +42,25 @@ public class NavigableSplitViewController: UIViewController {
     splitVC.preferredSplitBehavior = .tile
 
     // Hide the default sidebar button since we'll provide our own
+    // This is because `UISplitViewController` has internal animation timings that don't seem to
+    // function correctly when we are nesting within a `UINavigationController` like this.
+    //
+    // There will be caveats to this approach:
+    // For example, when hiding or showing the `primary` column, we elect to do so outside of a
+    // `UIView.animate(_: changes:)` block. It's unclear if this is an iPadOS 26 beta bug or if it's
+    // a limitation of the nested approach.
     splitVC.presentsWithGesture = false
 
     super.init(nibName: nil, bundle: nil)
     splitVC.delegate = self
   }
 
+  @available(*, unavailable)
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
+
+  // MARK: - View Lifecycle
 
   public override func viewDidLoad() {
     super.viewDidLoad()
@@ -293,10 +303,6 @@ public class NavigableSplitViewController: UIViewController {
         splitVC.show(.inspector)
       }
     }
-  }
-
-  public func updateNavigationButtons() {
-    setupBackButtonMirroring()
   }
 }
 
