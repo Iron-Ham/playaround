@@ -35,7 +35,6 @@ public class NavigableSplitViewController: UIViewController {
     splitVC.preferredSplitBehavior = .tile
 
     super.init(nibName: nil, bundle: nil)
-    splitVC.delegate = self
 
     splitVC.setViewController(primary, for: .primary)
     if traitCollection.horizontalSizeClass == .compact {
@@ -103,7 +102,8 @@ public class NavigableSplitViewController: UIViewController {
     }
 
     if let primaryViewController {
-      addNavigationButtons(to: primaryViewController, includeBackButton: isBackButtonVisible(for: .primary))
+      addNavigationButtons(
+        to: primaryViewController, includeBackButton: isBackButtonVisible(for: .primary))
     }
   }
 
@@ -133,5 +133,3 @@ public class NavigableSplitViewController: UIViewController {
     navigationController?.popViewController(animated: true)
   }
 }
-
-extension NavigableSplitViewController: UISplitViewControllerDelegate {}
