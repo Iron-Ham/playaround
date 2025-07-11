@@ -7,7 +7,7 @@ struct SplitButtonState: Hashable {
 }
 
 extension NavigableSplitViewController {
-  private var secondaryNavHasBackStack: Bool {
+  var secondaryNavHasBackStack: Bool {
     if let secondaryNavController = secondaryVC as? UINavigationController,
        secondaryNavController.viewControllers.count > 1 {
       true
@@ -16,7 +16,7 @@ extension NavigableSplitViewController {
     }
   }
 
-  private var primaryNavHasBackStack: Bool {
+  var primaryNavHasBackStack: Bool {
     if let primaryNavController = primaryVC as? UINavigationController,
        primaryNavController.viewControllers.count > 1 {
       true
@@ -26,21 +26,27 @@ extension NavigableSplitViewController {
   }
 
   private func isBackButtonVisible(for column: UISplitViewController.Column) -> Bool {
+    let hasParent = (navigationController?.viewControllers.count ?? 0) > 1
     switch column {
     case .primary where displayMode == .oneBesideSecondary:
-      primaryNavHasBackStack
+      if primaryNavHasBackStack {
+        return false // The standard backstack will handle
+      } else {
+        return hasParent
+      }
     case .primary:
-      false
+      return false // primary is either ephemeral or non-visible.
     case .supplementary:
       fatalError("We do not support threeColumn layouts")
     case .secondary:
-      secondaryNavHasBackStack
+      return displayMode == .secondaryOnly
+        && !secondaryNavHasBackStack // The standard backstack will handle
     case .compact:
-      primaryNavHasBackStack
+      return hasParent || primaryNavHasBackStack
     case .inspector:
-      false
+      return false
     @unknown default:
-      primaryNavHasBackStack
+      return hasParent || primaryNavHasBackStack
     }
   }
 
@@ -57,7 +63,7 @@ extension NavigableSplitViewController {
     case .primary:
       return SplitButtonState(
         isBackButtonVisible: isBackButtonVisible(for: .primary),
-        isSidebarLeftVisible: displayMode != .secondaryOnly,
+        isSidebarLeftVisible: true,
         isSidebarTrailingVisible: false
       )
     case .supplementary:
@@ -65,7 +71,7 @@ extension NavigableSplitViewController {
     case .secondary:
       return SplitButtonState(
         isBackButtonVisible: isBackButtonVisible(for: .secondary),
-        isSidebarLeftVisible: displayMode == .secondaryOnly,
+        isSidebarLeftVisible: false,
         isSidebarTrailingVisible: inspectorVC != nil && supportsInspector && !isInspectorVisible
       )
     case .compact:

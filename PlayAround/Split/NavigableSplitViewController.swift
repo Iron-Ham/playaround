@@ -256,7 +256,11 @@ public class NavigableSplitViewController: UIViewController {
   }
 
   @objc private func backButtonTapped() {
-    navigationController?.popViewController(animated: true)
+    if splitVC.displayMode == .secondaryOnly && !secondaryNavHasBackStack {
+      splitVC.preferredDisplayMode = .oneBesideSecondary
+    } else {
+      navigationController?.popViewController(animated: true)
+    }
   }
 
   @objc private func sidebarButtonTapped() {
