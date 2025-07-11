@@ -83,7 +83,7 @@ public class NavigableSplitViewController: UIViewController {
 
     splitVC.view.translatesAutoresizingMaskIntoConstraints = false
     NSLayoutConstraint.activate([
-      splitVC.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+      splitVC.view.topAnchor.constraint(equalTo: view.topAnchor),
       splitVC.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
       splitVC.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
       splitVC.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
