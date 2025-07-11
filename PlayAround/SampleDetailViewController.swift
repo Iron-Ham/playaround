@@ -79,8 +79,7 @@ class SampleDetailViewController: UIViewController {
 
     let splitVC = NavigableSplitViewController(
       primary: newListVC,
-      secondary: newDetailVC,
-      inspector: inspectorVC
+      secondary: newDetailVC
     )
     splitVC.title = "Nested Split View"
 

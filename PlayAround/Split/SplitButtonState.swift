@@ -35,11 +35,11 @@ extension NavigableSplitViewController {
     case .secondary:
       return false
     case .compact:
-      fatalError()
+      return hasParent
     case .inspector:
-      false
+      return false
     @unknown default:
-      primaryNavHasBackStack
+      return hasParent
     }
   }
 }
