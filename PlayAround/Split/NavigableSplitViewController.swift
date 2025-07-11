@@ -2,25 +2,26 @@ import UIKit
 
 public class NavigableSplitViewController: UIViewController {
 
-  var primaryViewController: UIViewController? {
+  public var primaryViewController: UIViewController? {
     splitVC.viewController(for: .primary)
   }
-  var secondaryViewController: UIViewController? {
+
+  public var secondaryViewController: UIViewController? {
     splitVC.viewController(for: .secondary)
   }
 
   @available(iOS 26.0, *)
-  var inspectorViewController: UIViewController? {
+  public var inspectorViewController: UIViewController? {
     splitVC.viewController(for: .inspector)
   }
 
-  let splitVC: CustomUISplitViewController
+  private let splitVC: CustomUISplitViewController
 
   var isCompact: Bool {
     splitVC.isCollapsed
   }
 
-  var displayMode: UISplitViewController.DisplayMode {
+  public var displayMode: UISplitViewController.DisplayMode {
     splitVC.displayMode
   }
 
