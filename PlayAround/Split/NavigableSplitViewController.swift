@@ -112,74 +112,42 @@ public class NavigableSplitViewController: UIViewController {
 
     removeBackButtons()
 
-    let displayMode = splitVC.displayMode
-    let shouldShowSidebarButton = !isCompact  // Only show sidebar button in regular layouts
-    let shouldShowInspectorButton = supportsInspector && inspectorVC != nil  // Always show if available
-
-    if displayMode == .secondaryOnly {
-      if let secondaryNavController = secondaryVC as? UINavigationController,
-        let topVC = secondaryNavController.topViewController
-      {
-        addNavigationButtons(
-          to: topVC, includeBackButton: true, includeSidebarButton: shouldShowSidebarButton,
-          includeInspectorButton: shouldShowInspectorButton)
-      } else {
-        addNavigationButtons(
-          to: secondaryVC, includeBackButton: true, includeSidebarButton: shouldShowSidebarButton,
-          includeInspectorButton: shouldShowInspectorButton)
-      }
+    // Apply button state to primary column
+    if let primaryNavController = primaryVC as? UINavigationController,
+      let topVC = primaryNavController.topViewController
+    {
+      let buttonState = buttonState(for: .primary)
+      addNavigationButtons(to: topVC, buttonState: buttonState)
     } else {
-      // Primary column is visible, add back button to primary (no inspector button)
-      if let primaryNavController = primaryVC as? UINavigationController,
-        let topVC = primaryNavController.topViewController
-      {
-        addNavigationButtons(
-          to: topVC, includeBackButton: true, includeSidebarButton: false,
-          includeInspectorButton: false)
-      } else {
-        addNavigationButtons(
-          to: primaryVC, includeBackButton: true, includeSidebarButton: false,
-          includeInspectorButton: false)
-      }
+      let buttonState = buttonState(for: .primary)
+      addNavigationButtons(to: primaryVC, buttonState: buttonState)
+    }
 
-      // Add sidebar and inspector buttons to secondary if it's visible and we're not in compact mode
-      if displayMode == .oneBesideSecondary && shouldShowSidebarButton {
-        if let secondaryNavController = secondaryVC as? UINavigationController,
-          let topVC = secondaryNavController.topViewController
-        {
-          addNavigationButtons(
-            to: topVC, includeBackButton: false, includeSidebarButton: true,
-            includeInspectorButton: shouldShowInspectorButton)
-        } else {
-          addNavigationButtons(
-            to: secondaryVC, includeBackButton: false, includeSidebarButton: true,
-            includeInspectorButton: shouldShowInspectorButton)
-        }
-      } else if displayMode == .oneBesideSecondary {
-        // Even if sidebar button is not shown, we still want inspector button in secondary
-        if let secondaryNavController = secondaryVC as? UINavigationController,
-          let topVC = secondaryNavController.topViewController
-        {
-          addNavigationButtons(
-            to: topVC, includeBackButton: false, includeSidebarButton: false,
-            includeInspectorButton: shouldShowInspectorButton)
-        } else {
-          addNavigationButtons(
-            to: secondaryVC, includeBackButton: false, includeSidebarButton: false,
-            includeInspectorButton: shouldShowInspectorButton)
-        }
-      }
+    // Apply button state to secondary column
+    if let secondaryNavController = secondaryVC as? UINavigationController,
+      let topVC = secondaryNavController.topViewController
+    {
+      let buttonState = buttonState(for: .secondary)
+      addNavigationButtons(to: topVC, buttonState: buttonState)
+    } else {
+      let buttonState = buttonState(for: .secondary)
+      addNavigationButtons(to: secondaryVC, buttonState: buttonState)
+    }
+
+    // Apply button state to inspector column if it exists
+    if let inspectorVC = inspectorVC, #available(iOS 26.0, *) {
+      let buttonState = buttonState(for: .inspector)
+      addNavigationButtons(to: inspectorVC, buttonState: buttonState)
     }
   }
 
   private func addNavigationButtons(
-    to viewController: UIViewController, includeBackButton: Bool, includeSidebarButton: Bool,
-    includeInspectorButton: Bool
+    to viewController: UIViewController, buttonState: SplitButtonState
   ) {
     var leadingGroups: [UIBarButtonItemGroup] = []
 
     // Add back button in its own group
-    if includeBackButton {
+    if buttonState.isBackButtonVisible {
       let backButton = UIBarButtonItem(
         image: UIImage(systemName: "chevron.left"),
         style: .plain,
@@ -194,7 +162,7 @@ public class NavigableSplitViewController: UIViewController {
     }
 
     // Add sidebar toggle button in its own group
-    if includeSidebarButton {
+    if buttonState.isSidebarLeftVisible {
       let sidebarButton = UIBarButtonItem(
         image: UIImage(systemName: "sidebar.left"),
         style: .plain,
@@ -209,7 +177,7 @@ public class NavigableSplitViewController: UIViewController {
     }
 
     // Add inspector toggle button as a pinned trailing item
-    if includeInspectorButton {
+    if buttonState.isSidebarTrailingVisible {
       let inspectorButton = UIBarButtonItem(
         image: UIImage(systemName: "sidebar.trailing"),
         style: .plain,
@@ -278,18 +246,12 @@ public class NavigableSplitViewController: UIViewController {
 
     // For trailing groups, we need to be more careful to preserve the inspector button
     // Only remove inspector buttons if we're explicitly asked to do so
-    let trailingGroups = viewController.navigationItem.trailingItemGroups
-
-    let filteredTrailingGroups = trailingGroups.filter { group in
-      !group.barButtonItems.contains { item in
-        item.target === self && item.action == #selector(inspectorButtonTapped)
+    if let pinnedTrailingGroup = viewController.navigationItem.pinnedTrailingGroup,
+       pinnedTrailingGroup.barButtonItems.contains(where: { $0.target === self && $0.action == #selector(inspectorButtonTapped) }) {
+      let filteredGroup = pinnedTrailingGroup.barButtonItems.filter { item in
+        item.action != #selector(inspectorButtonTapped)
       }
-    }
-
-    // Only update trailing groups if we actually found inspector buttons to remove
-    if filteredTrailingGroups.count != trailingGroups.count {
-      viewController.navigationItem.trailingItemGroups =
-        filteredTrailingGroups.isEmpty ? [] : filteredTrailingGroups
+      viewController.navigationItem.pinnedTrailingGroup = UIBarButtonItemGroup(barButtonItems: filteredGroup, representativeItem: nil)
     }
   }
 
@@ -312,6 +274,27 @@ public class NavigableSplitViewController: UIViewController {
         splitVC.hide(.inspector)
       } else {
         splitVC.show(.inspector)
+      }
+
+      DispatchQueue.main.async {
+        if let secondaryNavController = self.secondaryVC as? UINavigationController,
+          let topVC = secondaryNavController.topViewController
+        {
+          self.removeCustomButtons(from: topVC)
+          let buttonState = self.buttonState(for: .secondary)
+          self.addNavigationButtons(to: topVC, buttonState: buttonState)
+        } else {
+          self.removeCustomButtons(from: self.secondaryVC)
+          let buttonState = self.buttonState(for: .secondary)
+          self.addNavigationButtons(to: self.secondaryVC, buttonState: buttonState)
+        }
+
+        // Update inspector column buttons if it exists
+        if let inspectorVC = self.inspectorVC {
+          self.removeCustomButtons(from: inspectorVC)
+          let buttonState = self.buttonState(for: .inspector)
+          self.addNavigationButtons(to: inspectorVC, buttonState: buttonState)
+        }
       }
     }
   }

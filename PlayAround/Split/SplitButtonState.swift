@@ -36,7 +36,7 @@ extension NavigableSplitViewController {
     case .secondary:
       secondaryNavHasBackStack
     case .compact:
-      fatalError()
+      primaryNavHasBackStack
     case .inspector:
       false
     @unknown default:
@@ -65,7 +65,7 @@ extension NavigableSplitViewController {
     case .secondary:
       return SplitButtonState(
         isBackButtonVisible: isBackButtonVisible(for: .secondary),
-        isSidebarLeftVisible: displayMode != .secondaryOnly,
+        isSidebarLeftVisible: displayMode == .secondaryOnly,
         isSidebarTrailingVisible: inspectorVC != nil && supportsInspector && !isInspectorVisible
       )
     case .compact:
@@ -73,13 +73,13 @@ extension NavigableSplitViewController {
     case .inspector:
       return SplitButtonState(
         isBackButtonVisible: isBackButtonVisible(for: .primary),
-        isSidebarLeftVisible: displayMode != .secondaryOnly,
+        isSidebarLeftVisible: false,
         isSidebarTrailingVisible: true
       )
     @unknown default:
       return SplitButtonState(
         isBackButtonVisible: isBackButtonVisible(for: .primary),
-        isSidebarLeftVisible: displayMode != .secondaryOnly,
+        isSidebarLeftVisible: false,
         isSidebarTrailingVisible: false
       )
     }
